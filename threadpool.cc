@@ -1,3 +1,4 @@
+#include <atomic>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
@@ -10,8 +11,7 @@
 
 namespace threadpool {
 
-Threadpool::Threadpool(const int num_threads)
-    : num_threads_(num_threads), distribution_(0, num_threads_ - 1) {
+Threadpool::Threadpool(const int num_threads) : num_threads_(num_threads) {
   for (int ii = 0; ii < num_threads_; ++ii) {
     auto w = std::make_shared<Worker>();
     workers_.emplace_back(w);
@@ -21,7 +21,7 @@ Threadpool::Threadpool(const int num_threads)
 }
 
 void Threadpool::Enqueue(Job&& fn) {
-  std::shared_ptr<Worker> worker = Select();
+  std::shared_ptr<Worker> worker = workers_[Select()];
   {
     std::unique_lock<std::mutex> lock(worker->mtx);
     worker->workq.push(std::move(fn));
@@ -51,8 +51,10 @@ void Threadpool::Toil(const int thread_idx, std::shared_ptr<Worker> worker) {
   }
 }
 
-std::shared_ptr<Threadpool::Worker> Threadpool::Select() {
-  return workers_[distribution_(generator_)];
+uint32_t Threadpool::Select() {
+  static std::atomic_ulong idx(0);
+  auto val = idx.exchange((idx + 1) % num_threads_);
+  return val;
 }
 
 }  // namespace threadpool

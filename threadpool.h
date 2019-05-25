@@ -40,12 +40,9 @@ class Threadpool {
   // The number of threads in this pool.
   const int num_threads_;
 
-  std::default_random_engine generator_;
-  std::uniform_int_distribution<int> distribution_;
-
  private:
-  // Choose a thread to execute a job.
-  std::shared_ptr<Worker> Select();
+  // Choose a thread index to execute a job.
+  uint32_t Select();
 
   // Life of a worker thread. It takes the index of the worker thread in the
   // worker thread vector.
